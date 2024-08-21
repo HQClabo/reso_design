@@ -169,7 +169,9 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
 
 
 def fit_simulation_from_file(simulation_data_file, model, f0_guess=None, k_ext_guess=None, tan_delta=1e-5, print_results=True, plot_results=True):
-    """ Fit the complex scattering parameter from a simulation output file.
+    """ Fit the complex scattering parameter from a simulation output file. 
+
+    This function assumes that the data was saved from Sonnet using "Output -> S,Y,Z-Parameter file -> Complex format: Real-Imag".
 
     Args:
         simulation_data_file: Path to the location of simulation output file.
