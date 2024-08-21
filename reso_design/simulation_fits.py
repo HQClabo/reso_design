@@ -15,12 +15,12 @@ def S21_hanged(f_drive, f_0, k_int, k_ext):
 def S21_transmission(f_drive, f_0, k_int, k_ext):
     Delta = f_drive - f_0
     S21 = (k_ext/2)/(1j*Delta + (k_int + k_ext)/2)
-    return S21
+    return mag(S21)
 
 def S11_reflection(f_drive, f_0, k_int, k_ext):
     Delta = f_drive - f_0
     S11 = (1j*Delta + (k_ext - k_int)/2)/(-1j*Delta + (k_int + k_ext)/2)
-    return S11
+    return mag(S11)
 
 ####################### Auxiliary functions #########################
 
