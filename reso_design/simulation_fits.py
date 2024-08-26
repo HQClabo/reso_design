@@ -55,7 +55,7 @@ def find_HM_points(mag):
         idx += 1
     if idx == len(mag):
         print("Couldn't find the FWHM of the provided Sdata. No point was close enough to 3dB.")
-        return None
+        return None, None
     return low_idx, high_idx
 
 ####################### Fitting functions #########################
@@ -83,19 +83,22 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
         raise ValueError
     
     # If not provided, find the guess for f0
-    f0_guess = freq[np.argmax(np.abs((mag(Sdata))))]
+    if f0_guess == None:
+        f0_guess = freq[np.argmax(np.abs((mag(Sdata))))]
 
     # Calculate guess for k_int
     Q_int_guess = 1/tan_delta
     k_int_guess = f0_guess/Q_int_guess
 
     # If not provided, calculate guess for k_ext
-    low_idx, high_idx = find_HM_points(mag(Sdata))
-    FWHM = freq[high_idx] - freq[low_idx]
-    if FWHM is None: 
-        "No guess could be calculated for k_ext. Please provide the guess yourself."
-    k_ext_guess = FWHM
-    Q_ext_guess = f0_guess/k_ext_guess
+    if k_ext_guess == None:
+        low_idx, high_idx = find_HM_points(mag(Sdata))
+        FWHM = freq[high_idx] - freq[low_idx]
+        if FWHM is None: 
+            "No guess could be calculated for k_ext. Please provide the guess yourself."
+            raise ValueError
+        k_ext_guess = FWHM
+        Q_ext_guess = f0_guess/k_ext_guess
 
     # Restrict range to fit
 
