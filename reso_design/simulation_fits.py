@@ -93,12 +93,12 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
     # If not provided, calculate guess for k_ext
     if k_ext_guess == None:
         low_idx, high_idx = find_HM_points(mag(Sdata))
-        FWHM = freq[high_idx] - freq[low_idx]
-        if FWHM is None: 
+        if low_idx == None or high_idx == None: 
             "No guess could be calculated for k_ext. Please provide the guess yourself."
             raise ValueError
+        FWHM = freq[high_idx] - freq[low_idx]
         k_ext_guess = FWHM
-        Q_ext_guess = f0_guess/k_ext_guess
+    Q_ext_guess = f0_guess/k_ext_guess
 
     # Restrict range to fit
 
@@ -158,9 +158,12 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
         slice_to_plot = np.s_[idx_low:idx_high]
         # slice_to_plot = np.s_[:]
 
+        fitted_data_x = np.linspace(f_low, f_high, 1000)
+        fitted_data = model_lmfit.eval(fit_result.params, f_drive=fitted_data_x)
+
         plt.figure()
         plt.plot(freq[slice_to_plot], mag(Sdata)[slice_to_plot], '.', color="black", label="Simulation")
-        plt.plot(freq[slice_to_plot], fitted_data[slice_to_plot], color="red", label="Fit")
+        plt.plot(fitted_data_x, fitted_data, color="red", label="Fit")
         plt.xlabel("Frequency (GHz)")
         plt.ylabel("Mag($S_{21}$)")
         plt.legend()
