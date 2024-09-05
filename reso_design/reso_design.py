@@ -8,6 +8,7 @@ e = sc.constants.elementary_charge
 phi_0 = h/(2*e)
 mu_0 = sc.constants.mu_0
 eps_0 = sc.constants.epsilon_0
+mu0 = sc.constants.mu_0
 delta_0 = 176e-6 # superconducting gap of Al for T << Tc
 eps_r_AlOx = 9
 
@@ -43,6 +44,16 @@ Source for material properties: https://uspas.fnal.gov/materials/15Rutgers/1_SRF
 '''
 
 class Junction:
+    """
+    Class describing an Josephson junction Al-AlOx-Al.
+
+    Args:
+        d_up: Thickness of the top Al layer.
+        d_down: Thickness of the bottom Al layer.
+        t: Thickness of the tunneling barrier.
+        w: Width of the junction.
+
+    """
     def __init__(self, d_up, d_down, t, w):
         self.d_up = d_up
         self.d_down = d_down
@@ -115,26 +126,82 @@ class SuperconductingFilm:
         repr += f"In-plane Bcrit: {self.B_crit_in*1e3:.1f} mT\n"
         repr += f"Out-of-plane Bcrit: {self.B_crit_bulk*1e3:.1f} mT\n"
         return repr
+    
+class CPW:
+    def __init__(self, w, s, t, l, H, eps_r = 11.9, type="lambda_half"):
+        """
+        Class for a CPW resonator.
+
+        Args: 
+            w: Width of the inner conductor.
+            s: Spacing from the ground plane.
+            t: Thickness of the metal.
+            l: Length of the CPW.
+            H: Height of the substrate.
+            eps_r: Dielectric constant of the substrate (default value is 11.9).
+            type:"lambda_half" (default) or "lambda_quarter".
+    
+        """
+        self.w = w
+        self.s = s
+        self.t = t
+        self.length = l
+        self.H = H
+        self.eps_r = eps_r
+        self.type = type
+
+        if type != "lambda_half" and type != "lambda_quarter":
+            print('Error: the provided type must be either  "lambda_half" or  "lambda_quarter"')
+            raise ValueError
+
+        self.update()
+
+    def update(self):
+        # Elliptic integrals
+        K = K_func(self.w, self.s, self.H)
+        Kp = Kp_func(self.w, self.s, self.H)
+        K1 = K1_func(self.w, self.s, self.H)
+        K1p = K1p_func(self.w, self.s, self.H)
+        Gamma = 1 / (K/Kp + K1/K1p)
+        A = 2*Gamma
+        B = 1/A
+        eps_eff = (1 + self.eps_r * Kp/K*K1/K1p) / (1 + Kp/K*K1/K1p)
+        # Capacitance and inductance per unit length
+        self.C = 4*eps_eff*eps_0 * B
+        self.L = mu0/4 * A
+
+        self.Z0 = np.sqrt(self.L/self.C)
+        self.vph = 1/np.sqrt(self.L*self.C)
+        if self.type ==  "lambda_half":
+            self.fr = self.vph/(2*self.length)
+        elif self.type ==  "lambda_quarter":
+            self.fr = self.vph/(4*self.length)
+
+    def __repr__(self):
+        repr = ""
+        repr += f"Inductance per unit length L = {self.L*1e3:.2f} nH/um\n"
+        repr += f"Capacitance per unit length C = {self.C*1e9:.2f} fF/um\n"
+        repr += f"Phase velocity vph = {self.vph:.0f} m/s\n"
+        repr += f"Characteristic impedance Z0 = {self.Z0:.0f} Ohm\n"
+        repr += f"Resonance frequency fr = {self.fr*1e-9:.4f} GHz\n"
 
 class JJ_array:
     def __init__(self, junction, w, s, H, l_junction, l_spurious, l_unit, N, RA, eps_r=11.9):
         """
-        Object describing a JJ array resonator.
+        Class describing a JJ array resonator (so far only lambda/4).
 
         Args:
             junction: Junction object for the junctions in the resonators
-            w: width of the resonator
-            s: spacing between resonator core and ground plane
-            H: substrate thickness
-            l_unit: junction length
-            l_spurious: length of the spurious junction
-            l_unit: length of the junction unit
-            N: number of junctions
-            RA: junction resistance at room T times area
-            eps_r: dielectric constant of the substrate (default is Si)
+            w: Width of the resonator
+            s: Spacing between resonator core and ground plane
+            H: Substrate thickness
+            l_unit: Junction length
+            l_spurious: Length of the spurious junction
+            l_unit: Length of the junction unit
+            N: Number of junctions
+            RA: Junction resistance at room T times area
+            eps_r: Dielectric constant of the substrate (default is Si)
         
-        Returns:
-            None
         """
         self.J = junction
         self.w = w
@@ -150,6 +217,12 @@ class JJ_array:
         self.update()
 
     def update(self):
+        """
+        Recalculate all the resonator's parameters. You can use this function after changing one of the object's attributes.
+
+        Returns: None
+        
+        """
     
         self.length = self.l_unit * self.N
 
@@ -195,6 +268,52 @@ class JJ_array:
         self.alpha0 = h/(4*e**2*self.RJ)
 
         self.f_plasma = 1/np.sqrt(2*np.pi*self.L_junction*self.C_J)
+    
+    def fr_of_B_in(self, B_in):
+        """
+        Calculate the resonance frequency of the resonator as a function of the external in-plane B field.
+
+        Args: 
+            B_in: Array of the in-plane magnetic field.
+
+        Returns: 
+            Array with the resonance frequency.
+        """
+        return self.fr * np.power(1 - (B_in/self.J.B_crit_in)**2, 1./4) * np.sqrt(np.abs(np.sinc(B_in / self.J.B_phi0)))
+    
+    def fr_of_B_out(self, B_in):
+        """
+        Calculate the resonance frequency of the resonator as a function of the external out-of-plane B field.
+
+        Args: 
+            B_out: Array of the out-of-plane magnetic field.
+
+        Returns: 
+            Array with the resonance frequency.
+        """
+        return self.fr * np.power(1 - (B_in/self.J.B_crit_in)**2, 1./4)
+    
+    def plot_fr_of_B_in(self):
+        """
+        Plot the resonance frequency as a function of an external in-plane magnetic field.
+        """
+        B_range = np.linspace(-self.J.B_crit_in, self.J.B_crit_in, 1000)
+        plt.figure()
+        plt.plot(B_range*1e3, self.fr_of_B_in(B_range)*1e-9)
+        plt.xlabel("$B_{\parallel}$ (mT)")
+        plt.ylabel("f (GHz)")
+        plt.plot()
+
+    def plot_fr_of_B_out(self):
+        """
+        Plot the resonance frequency as a function of an external out-of-plane magnetic field.
+        """
+        B_range = np.linspace(-self.J.B_crit_out, self.J.B_crit_out, 1000)
+        plt.figure()
+        plt.plot(B_range*1e3, self.fr_of_B_out(B_range)*1e-9)
+        plt.xlabel("$B_{\parallel}$ (mT)")
+        plt.ylabel("f (GHz)")
+        plt.plot()
 
     def __str__(self):
         repr = ""
@@ -239,9 +358,6 @@ class JJ_array:
         repr += f"Equivalent impedance Zeq = {self.Zeq:.0f} Ohm\n"
         repr += f"Resonance frequency fr = {self.fr*1e-9:.4f} GHz\n"
         
-
-
-
         return repr
 
 # %%
