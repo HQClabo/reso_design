@@ -200,7 +200,7 @@ class SuperconductingFilm:
     
 
 class JJ_array(Junction):
-    def __init__(self, d_top, d_bottom, tox, w, l_junction, l_spurious, l_unit, gap, H, N, RA, eps_r=11.9):
+    def __init__(self, d_top, d_bottom, tox, w, l_junction, l_spurious, l_unit, gap, H, N, RA, eps_r=11.9, type="lambda_quarter"):
         """
         Class describing a JJ array resonator (so far only lambda/4).
 
@@ -217,6 +217,7 @@ class JJ_array(Junction):
             N: Number of junctions.
             RA: Junction resistance at room T times area.
             eps_r: Dielectric constant of the substrate (default is 11.9).
+            type: "lambda_quarter" or "lambda_half".
         
         """
         # Initialize the junction parameters
@@ -229,6 +230,9 @@ class JJ_array(Junction):
         self.N = N
         self.RA = RA
         self.eps_r = eps_r
+        assert type == "lambda_quarter" or type == "lambda_half"
+        self.type = type
+
         # Initialize to None
         self.Ctot = None
 
@@ -262,11 +266,18 @@ class JJ_array(Junction):
 
         self.Z0 = np.sqrt(self.L/self.C)
         self.vph = 1/np.sqrt(self.L*self.C)
-        self.fr = self.vph/(4*self.length)
+        if self.type == "lambda_quarter":
+            self.fr = self.vph/(4*self.length) 
+            self.Leq = 8*self.Ltot/(np.pi**2) 
+            self.Ceq = self.C*self.length/2
+            self.Zeq = 4/np.pi * self.Z0
+        if self.type == "lambda_half":
+            self.fr = self.vph/(2*self.length)
+            self.Leq = 2*self.Ltot*(np.pi**2) 
+            self.Ceq = self.C*self.length/2
+            self.Zeq = 2/np.pi * self.Z0
 
-        self.Leq = self.Ltot*(8/np.pi**2) 
-        self.Ceq = self.C*self.length/2 
-        self.Zeq = 4/np.pi * self.Z0
+         
         self.fr_eq = 1/(2*np.pi*np.sqrt(self.Leq*self.Ceq))
 
 
@@ -310,10 +321,12 @@ class JJ_array(Junction):
         print("----------------------------------------------")
         print(f"Phase velocity vph = {self.vph*1e-8:.4f} 10^8 m/s")
         print(f"Characteristic impedance Z0 = {self.Z0:.0f} Ohm")
-        print(f"Equivalent impedance Ceq = {self.Ceq*1e15:.2f} fF")
+        print(f"Equivalent capacitance Ceq = {self.Ceq*1e15:.2f} fF")
         print(f"Equivalent inductance Leq = {self.Leq*1e9:.1f} nH")
         print(f"Equivalent impedance Zeq = {self.Zeq:.0f} Ohm")
         print(f"Resonance frequency fr = {self.fr*1e-9:.4f} GHz")
+        print(f"Eq resonance frequency fr = {self.fr_eq*1e-9:.4f} GHz")
+
         
     
 class CPW:

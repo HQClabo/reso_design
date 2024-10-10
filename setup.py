@@ -11,7 +11,6 @@ setuptools.setup(
     description="Python module for resonator design",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    # url="https://github.com/HQClabo/dataAnalysis",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
