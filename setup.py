@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="resoDesign", 
-    version="0.1",
+    version="1.0",
     author="Elena Acinapura",
     author_email="elena.acinapura@gmail.com",
     description="Python module for resonator design",
