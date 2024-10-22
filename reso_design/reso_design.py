@@ -101,7 +101,10 @@ class Junction:
         flux_A = self.w * (self.tox + min(self.london_eff_up, self.d_top) + min(self.london_eff_down, self.d_bottom))
         self.B_phi0 = phi_0 / flux_A
 
-        self.L_junction = calculate_junction_kinetic_inductance(self.w, self.l_junction, self.RA)
+        self.area = self.w*self.l_junction
+        self.R_junction = self.RA/self.area
+        self.Ic0 = delta_0*np.pi/(2*self.R_junction)
+        self.L_junction = phi_0/(2*np.pi*self.Ic0)
         self.EJ = (phi_0/(2*np.pi))**2 /self.L_junction
 
         self.C_J = eps_0*eps_r_AlOx*self.w*self.l_junction/self.tox
@@ -152,12 +155,15 @@ class Junction:
         print(f"Al thickness bottom: {self.d_bottom*1e9:.0f} nm")
         print(f"Oxide thickness: {self.tox*1e9:.0f} nm")
         print(f"Junction width: {self.w*1e9:.0f} nm")
+        print(f"Junction length l: {self.l_junction*1e9:.0f} nm")
+        print(f"Junction area: {self.area*1e12:.3f} um^2")
 
         print("----------------------------------------------")
         print("Behaviour in magnetic field")
         print("----------------------------------------------")
         print(f"London eff. length top: {self.london_eff_up*1e9:.0f} nm")
         print(f"London eff. length bottom: {self.london_eff_down*1e9:.0f} nm")
+        print(f"Out-of-plane Bcrit: {self.B_crit_out*1e3:.1f} mT")
         print(f"In-plane Bcrit top: {self.B_crit_in_up*1e3:.1f} mT")
         print(f"In-plane Bcrit bottom: {self.B_crit_in_down*1e3:.1f} mT")
         print(f"In-plane one flux quantum B field: {self.B_phi0*1e3:.1f} mT")
@@ -165,10 +171,13 @@ class Junction:
         print("----------------------------------------------")
         print("Junction physical quantity")
         print("----------------------------------------------")
+        print(f"Junction RT resistance = {self.R_junction:.0f} Ohm")
+        print(f"Critical current Ic0 = {self.Ic0*1e9:.0f} nA")
         print(f"Junction inductance L_junction = {self.L_junction*1e9:.2f} nH/junction")
         print(f"Junction capacitance C_junction = {self.C_J*1e15:.2f} fF")
+        print(f"EJ = {self.EJ} J")
         print(f"Ratio EJ/Ec = {self.EJ/self.Ec:.2f}")
-        print(f"Ratio alpha0 = {self.alpha0:.2f}")
+        print(f"Alpha0 = RQ/RJ = {self.alpha0:.2f}")
         print(f"Plasma frequency f_P = {self.f_plasma*1e-9:.0f} GHz")
 
 
@@ -199,7 +208,7 @@ class SuperconductingFilm:
         return repr
     
 
-class JJ_array(Junction):
+class JJArrayDolan(Junction):
     def __init__(self, d_top, d_bottom, tox, w, l_junction, l_spurious, l_unit, gap, H, N, RA, eps_r=11.9, type="lambda_quarter"):
         """
         Class describing a JJ array resonator (so far only lambda/4).
@@ -266,6 +275,8 @@ class JJ_array(Junction):
 
         self.Z0 = np.sqrt(self.L/self.C)
         self.vph = 1/np.sqrt(self.L*self.C)
+        self.alpha = self.Z0 / (h/(2*e)**2)
+
         if self.type == "lambda_quarter":
             self.fr = self.vph/(4*self.length) 
             self.Leq = 8*self.Ltot/(np.pi**2) 
@@ -326,6 +337,7 @@ class JJ_array(Junction):
         print(f"Equivalent impedance Zeq = {self.Zeq:.0f} Ohm")
         print(f"Resonance frequency fr = {self.fr*1e-9:.4f} GHz")
         print(f"Eq resonance frequency fr = {self.fr_eq*1e-9:.4f} GHz")
+        print(f"Alpha = Z/RQ = {self.alpha}")
 
         
     

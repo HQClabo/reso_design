@@ -1,5 +1,5 @@
 #%% 
-from reso_design import JJ_array
+from reso_design import JJArrayDolan
 
 d_bottom = 20e-9 # metal thickness
 d_top = 40e-9 # metal thickness
@@ -16,7 +16,7 @@ RA = 650e-12    # junction normalized RT resistance in Ohm m^2
 
 N0 = 26          # number of junctions
 
-reso = JJ_array(d_top, d_bottom, tox, w, l_j, l_s, l_u, gap, H, N0, RA)
+reso = JJArrayDolan(d_top, d_bottom, tox, w, l_j, l_s, l_u, gap, H, N0, RA)
 
 # Print a summary of all the parameters and physical quantities of the resonator
 reso.print()
