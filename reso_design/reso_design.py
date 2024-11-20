@@ -49,6 +49,13 @@ def calculate_geometric_capacitance_coplanar(w, gap, H, eps_r=11.9):
 
     return 4*eps_eff*eps_0 * B
 
+def calculate_geometric_capacitance_microstrip(w, t_ox, eps_r_ox):
+    return w * eps_0 * eps_r_ox / t_ox
+
+def calculate_Z0_microstrip(w, t_ox, eps_r_ox):
+    eps_eff = (eps_r_ox + 1)/2 + (eps_r_ox + 1)/2 / (np.sqrt(1 + 12*t_ox/w))
+    return 60/np.sqrt(eps_eff) * np.log(8*t_ox/w + w/(4*t_ox))
+
 def calculate_junction_kinetic_inductance(w, l, RA):
     area = w*l
     resistance = RA/area
@@ -63,24 +70,24 @@ Source for material properties: https://uspas.fnal.gov/materials/15Rutgers/1_SRF
 
 class Junction:
     """
-    Class describing an Josephson junction Al-AlOx-Al.
+    Class describing a generic Josephson junction Al-AlOx-Al.
 
     Args:
         d_top: Thickness of the top Al layer.
         d_bottom: Thickness of the bottom Al layer.
-        t: Thickness of the tunneling barrier.
+        t_ox: Thickness of the tunneling barrier.
         w: Width of the junction.
         l: Length of the junction.
-        RA: Resistance times area of the junction.
+        sheet_resistance: Resistance times area of the junction.
 
     """
-    def __init__(self, d_top, d_bottom, tox, w, l, RA=550e-12):
+    def __init__(self, d_top, d_bottom, t_ox, w, l, sheet_resistance=550e-12):
         self.d_top = d_top
         self.d_bottom = d_bottom
-        self.tox = tox
+        self.tox = t_ox
         self.w = w
         self.l_junction = l
-        self.RA = RA
+        self.RA = sheet_resistance
 
         self.london = 16e-9
         self.pippard = 1600e-9
@@ -209,7 +216,7 @@ class SuperconductingFilm:
     
 
 class JJArrayDolan(Junction):
-    def __init__(self, d_top, d_bottom, tox, w, l_junction, l_spurious, l_unit, gap, H, N, RA, eps_r=11.9, type="lambda_quarter"):
+    def __init__(self, d_top, d_bottom, tox, w, l_junction, l_spurious, l_unit, gap, N, H=525e-6, sheet_resistance=550e-12, eps_r=11.9, type="lambda_quarter"):
         """
         Class describing a JJ array resonator (so far only lambda/4).
 
@@ -224,7 +231,7 @@ class JJArrayDolan(Junction):
             H: Substrate thickness.
             l_unit: Length of the junction unit.
             N: Number of junctions.
-            RA: Junction resistance at room T times area.
+            sheet_resistance: Junction RT sheet resistance (resistance times area).
             eps_r: Dielectric constant of the substrate (default is 11.9).
             type: "lambda_quarter" or "lambda_half".
         
@@ -237,7 +244,7 @@ class JJArrayDolan(Junction):
         self.l_spurious = l_spurious
         self.l_unit = l_unit
         self.N = N
-        self.RA = RA
+        self.RA = sheet_resistance
         self.eps_r = eps_r
         assert type == "lambda_quarter" or type == "lambda_half"
         self.type = type
@@ -287,7 +294,6 @@ class JJArrayDolan(Junction):
             self.Leq = 2*self.Ltot*(np.pi**2) 
             self.Ceq = self.C*self.length/2
             self.Zeq = 2/np.pi * self.Z0
-
          
         self.fr_eq = 1/(2*np.pi*np.sqrt(self.Leq*self.Ceq))
 
@@ -338,6 +344,144 @@ class JJArrayDolan(Junction):
         print(f"Resonance frequency fr = {self.fr*1e-9:.4f} GHz")
         print(f"Eq resonance frequency fr = {self.fr_eq*1e-9:.4f} GHz")
         print(f"Alpha = Z/RQ = {self.alpha}")
+
+
+
+class JJArrayBridgeless(Junction):
+    def __init__(self, d_top, d_bottom, tox, w, l_junction, l_unit, gap, N, H=525e-6, sheet_resistance=550e-12, eps_r=11.9, type="lambda_quarter", microstrip=False, t_ox_microstrip=None, eps_r_ox_microstrip=None):
+        """
+        Class describing a JJ array resonator (so far only lambda/4).
+
+        Args:
+            d_top: Thickness of the top Al layer.
+            d_bottom: Thickness of the bottom Al layer.
+            w: Width of the resonator.
+            l_junction: Wength of the junction.
+            l_spurious: Length of the spurious junction.
+            l_unit: Length of one unit (junction + spurious junction + gaps in between, i.e. bridge + body).
+            gap: Gap between resonator core and ground plane.
+            H: Substrate thickness.
+            l_unit: Length of the junction unit.
+            N: Number of junctions.
+            sheet_resistance: Junction RT sheet resistance (resistance times area).
+            eps_r: Dielectric constant of the substrate (default is 11.9).
+            type: "lambda_quarter" or "lambda_half".
+        
+        """
+        # Initialize the junction parameters
+        # An now all the other parameters
+        self.gap = gap
+        self.H = H
+        self.l_junction = l_junction
+        self.l_unit = l_unit
+        self.N = N
+        self.RA = sheet_resistance
+        self.eps_r = eps_r
+        assert type == "lambda_quarter" or type == "lambda_half"
+        self.type = type
+        self.microstrip = microstrip
+        self.t_ox_microstrip = t_ox_microstrip
+        self.eps_r_ox_microstrip = eps_r_ox_microstrip
+
+        # Initialize to None
+        self.Ctot = None
+
+        super().__init__(d_top, d_bottom, tox, w, l_junction)
+        self.update()
+
+    def update(self):
+        """
+        (Re)calculate all the resonator's parameters. 
+        This function gets called during the initialization of the object. 
+        In addition, you can use this function after changing one of the object's attributes.
+
+        Returns: None
+        
+        """
+        super().update()
+    
+        self.length = self.l_unit * self.N
+        self.Ltot = self.L_junction*self.N
+        self.L = self.Ltot/self.length
+        self.n_sq = int(self.length/self.w)
+        self.Lsq = self.Ltot/self.n_sq
+
+        if self.microstrip:
+            self.C = calculate_geometric_capacitance_microstrip(self.w, self.t_ox_microstrip, self.eps_r_ox_microstrip)
+        else:
+            self.C = calculate_geometric_capacitance_coplanar(self.w, self.gap, self.H, self.eps_r)
+
+        # In case Ctot has been written (for instance because obtained from simulation)
+        if self.Ctot != None: 
+            self.C = self.Ctot
+
+        self.Z0 = np.sqrt(self.L/self.C)
+        self.vph = 1/np.sqrt(self.L*self.C)
+        self.alpha = self.Z0 / (h/(2*e)**2)
+
+        if self.type == "lambda_quarter":
+            self.fr = self.vph/(4*self.length) 
+            self.Leq = 8*self.Ltot/(np.pi**2) 
+            self.Ceq = self.C*self.length/2
+            self.Zeq = 4/np.pi * self.Z0
+        if self.type == "lambda_half":
+            self.fr = self.vph/(2*self.length)
+            self.Leq = 2*self.Ltot*(np.pi**2) 
+            self.Ceq = self.C*self.length/2
+            self.Zeq = 2/np.pi * self.Z0
+         
+        self.fr_eq = 1/(2*np.pi*np.sqrt(self.Leq*self.Ceq))
+
+
+    def update_C_from_simulation(self, fr_simulation):
+        self.Ctot = 1/(16 * self.length**2 * fr_simulation**2 * self.L)
+        self.update()
+    
+    def plot_f_of_B_in(self):
+        """
+        Plot the resonance frequency as a function of an external in-plane magnetic field.
+        """
+        return super().plot_f_of_B_in(f_max = self.fr)
+
+    def plot_f_of_B_out(self):
+        return super().plot_f_of_B_out(f_max = self.fr)
+
+    def print(self):
+        super().print()
+
+        print("\n**********************************************")
+        print("JJ ARRAY RESONATOR PARAMETERS")
+        print("**********************************************")
+        print("----------------------------------------------")
+        print("Design parameters")
+        print("----------------------------------------------")
+        print(f"Number of junctions N = {self.N}")
+        print(f"Total length l = {self.length*1e6:.2f} um")
+        print(f"Junction length l_junction = {self.l_junction*1e6:.1f} um")
+        print(f"Unit length = {self.l_unit*1e6:.1f} um")
+        if self.microstrip:
+            print(f"Microstrip oxide thickness = {self.t_ox_microstrip*1e9:.0f} nm")
+            print(f"Microstrip oxide eps_r = {self.eps_r_ox_microstrip:.1f}")
+        print("----------------------------------------------")
+        print("Inductance and capacitance parameters")
+        print("----------------------------------------------")
+        print(f"Total inductance Ltot = {self.Ltot*1e9:.2f} nH")
+        print(f"Number of squares: {self.n_sq}")
+        print(f"Inductance per square Lsq = {self.Lsq*1e12:.0f} pH/sq")
+        print(f"Inductance per unit length L = {self.L*1e3:.2f} nH/um")
+        print(f"Capacitance per unit length C = {self.C*1e9:.2f} fF/um")
+        print("----------------------------------------------")
+        print("Resonator parameters")
+        print("----------------------------------------------")
+        print(f"Phase velocity vph = {self.vph*1e-8:.4f} 10^8 m/s")
+        print(f"Characteristic impedance Z0 = {self.Z0:.0f} Ohm")
+        print(f"Equivalent capacitance Ceq = {self.Ceq*1e15:.2f} fF")
+        print(f"Equivalent inductance Leq = {self.Leq*1e9:.1f} nH")
+        print(f"Equivalent impedance Zeq = {self.Zeq:.0f} Ohm")
+        print(f"Resonance frequency fr = {self.fr*1e-9:.4f} GHz")
+        print(f"Eq resonance frequency fr = {self.fr_eq*1e-9:.4f} GHz")
+        print(f"Alpha = Z/RQ = {self.alpha}")
+
 
         
     
