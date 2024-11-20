@@ -8,7 +8,6 @@ e = sc.constants.elementary_charge
 phi_0 = h/(2*e)
 mu_0 = sc.constants.mu_0
 eps_0 = sc.constants.epsilon_0
-mu0 = sc.constants.mu_0
 delta_0 = 176e-6 # superconducting gap of Al for T << Tc
 eps_r_AlOx = 9
 
