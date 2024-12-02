@@ -116,9 +116,8 @@ class Junction:
 
         self.C_J = eps_0*eps_r_AlOx*self.w*self.l_junction/self.tox
         self.Ec = e**2/(2*self.C_J)
-        self.RJ = self.RA/(self.w * self.l_junction)
-        self.alpha0 = h/(4*e**2*self.RJ)
-        self.f_plasma = 1/np.sqrt(2*np.pi*self.L_junction*self.C_J)
+        self.alpha0 = h/(4*e**2*self.R_junction)
+        self.f_plasma = 1/(2*np.pi*np.sqrt(self.L_junction*self.C_J))
 
     def f_of_B_in(self, B_in, f_max=10e9):
         return f_max * np.power(1 - (B_in/self.B_crit_in)**2, 1./4) * np.sqrt(np.abs(np.sinc(B_in / self.B_phi0)))
@@ -252,7 +251,7 @@ class JJArrayDolan(Junction):
         # Initialize to None
         self.Ctot = None
 
-        super().__init__(d_top, d_bottom, tox, w, l_junction)
+        super().__init__(d_top, d_bottom, tox, w, l_junction, sheet_resistance=sheet_resistance)
         self.update()
 
     def update(self):
@@ -322,8 +321,8 @@ class JJArrayDolan(Junction):
         print("----------------------------------------------")
         print(f"Number of junctions N = {self.N}")
         print(f"Total length l = {self.length*1e6:.2f} um")
-        print(f"Junction length l_junction = {self.l_junction*1e6:.1f} um")
-        print(f"Length of spurious junction l_spurious = {self.l_spurious*1e6:.1f} um")
+        print(f"Junction length l_junction = {self.l_junction*1e6:.3f} um")
+        print(f"Length of spurious junction l_spurious = {self.l_spurious*1e6:.3f} um")
         print(f"Unit length = {self.l_unit*1e6:.1f} um")
         print("----------------------------------------------")
         print("Inductance and capacitance parameters")
@@ -332,7 +331,7 @@ class JJArrayDolan(Junction):
         print(f"Number of squares: {self.n_sq}")
         print(f"Inductance per square Lsq = {self.Lsq*1e12:.0f} pH/sq")
         print(f"Inductance per unit length L = {self.L*1e3:.2f} nH/um")
-        print(f"Capacitance per unit length C = {self.C*1e9:.2f} fF/um")
+        print(f"Capacitance per unit length C = {self.C*1e9:.4f} fF/um")
         print("----------------------------------------------")
         print("Resonator parameters")
         print("----------------------------------------------")
@@ -386,7 +385,7 @@ class JJArrayBridgeless(Junction):
         # Initialize to None
         self.Ctot = None
 
-        super().__init__(d_top, d_bottom, tox, w, l_junction)
+        super().__init__(d_top, d_bottom, tox, w, l_junction, sheet_resistance=sheet_resistance)
         self.update()
 
     def update(self):
