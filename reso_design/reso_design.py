@@ -430,6 +430,16 @@ class JJArrayBridgeless(Junction):
          
         self.fr_eq = 1/(2*np.pi*np.sqrt(self.Leq*self.Ceq))
 
+    def calc_N_given_f(self, freq):
+        if self.type == "lambda_quarter":
+            length = self.vph/(4*freq)
+        if self.type == "lambda_half":
+            length = self.vph/(2*freq)
+        N = int(length//self.l_unit)
+        self.N = N
+        self.update()
+        return N
+
 
     def update_C_from_simulation(self, fr_simulation):
         self.Ctot = 1/(16 * self.length**2 * fr_simulation**2 * self.L)

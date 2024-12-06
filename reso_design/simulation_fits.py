@@ -7,10 +7,12 @@ import csv
 def mag(Sdata):
     return 20*np.log10(np.abs(Sdata))
 
-def S21_hanged(f_drive, f_0, k_int, k_ext):
+def S21_hanged(f_drive, f_0, k_int, k_ext, a, alpha, tau):
     Delta = f_drive - f_0
     S21 = (Delta - 1j*k_int/2)/(Delta - 1j*(k_int + k_ext)/2)
-    return mag(S21)
+    S21_mag = 20*np.log10(np.abs(S21))
+    environment =  a * np.exp(1j * (alpha - 2*np.pi*f_drive*tau)) # environmental factors: tau cable delay, a scaling factor, alpha phase rotation
+    return S21 * environment
 
 def S21_transmission(f_drive, f_0, k_int, k_ext):
     Delta = f_drive - f_0
@@ -100,13 +102,20 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
         k_ext_guess = FWHM
     Q_ext_guess = f0_guess/k_ext_guess
 
-    # Restrict range to fit
+
+    a_guess = 1
+    alpha_guess = 0
+    tau_guess = 0
 
     # Create parameter object
-    params=lmfit.Parameters() # object
+    params=lmfit.Parameters()
     params.add('k_int',value=k_int_guess,vary=True)
     params.add('k_ext',value=k_ext_guess,vary=True)
     params.add('f_0',value=f0_guess,vary=True)
+    params.add('a',value=a_guess,vary=True)
+    params.add('alpha',value=alpha_guess,vary=True)
+    params.add('tau',value=tau_guess    ,vary=True)
+
 
     print("------------------------------------")
     print("Fit guesses")
@@ -116,6 +125,9 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
     print(f"Q_ext_guess = {Q_ext_guess:.0f}")
     print(f"k_int_guess = {k_int_guess*1e3:.2f} MHz")
     print(f"Q_int_guess = {Q_int_guess:.0f}")
+    print(f"a_guess = {a_guess:.2f}")
+    print(f"alpha_guess = {alpha_guess:.2e}")
+    print(f"tau_guess = {tau_guess:.2e}")
 
 
     # Create the lmfit model
@@ -127,13 +139,17 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
         model_lmfit = lmfit.Model(S21_transmission)
 
     # Fit and extract parameters
-    fit_result = model_lmfit.fit(mag(Sdata), params, f_drive=freq)
+    fit_result = model_lmfit.fit(Sdata, params, f_drive=freq)
     fitted_data = model_lmfit.eval(fit_result.params, f_drive=freq)
     k_ext_fit = fit_result.params['k_ext'].value
     k_int_fit = fit_result.params['k_int'].value
     f0_fit = fit_result.params['f_0'].value
     Q_int_fit = f0_fit/k_int_fit
     Q_ext_fit = f0_fit/k_ext_fit
+
+    a_fit = fit_result.params['a'].value
+    alpha_fit = fit_result.params['alpha'].value
+    tau_fit = fit_result.params['tau'].value
 
     # Print results
     if print_result:
@@ -145,6 +161,9 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
         print(f"Q_ext = {Q_ext_fit:.0f}")
         print(f"k_int = {k_int_fit*1e3:.3f} MHz")
         print(f"Q_int = {Q_int_fit:.0f}")
+        print(f"a = {a_fit:.2f}")
+        print(f"alpha = {alpha_fit:.2e}")
+        print(f"tau = {tau_fit:.2e}")
         print("------------------------------------")
 
     # Plot
@@ -163,7 +182,7 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
 
         plt.figure()
         plt.plot(freq[slice_to_plot], mag(Sdata)[slice_to_plot], '.', color="black", label="Simulation")
-        plt.plot(fitted_data_x, fitted_data, color="red", label="Fit")
+        plt.plot(fitted_data_x, mag(fitted_data), color="red", label="Fit")
         plt.xlabel("Frequency (GHz)")
         plt.ylabel("Mag($S_{21}$)")
         plt.legend()
