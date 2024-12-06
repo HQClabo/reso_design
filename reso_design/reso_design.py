@@ -534,7 +534,7 @@ class CPW:
         eps_eff = (1 + self.eps_r * Kp/K*K1/K1p) / (1 + Kp/K*K1/K1p)
         # Capacitance and inductance per unit length
         self.C = 4*eps_eff*eps_0 * B
-        self.L = mu0/4 * A
+        self.L = mu_0/4 * A
 
         self.Z0 = np.sqrt(self.L/self.C)
         self.vph = 1/np.sqrt(self.L*self.C)
