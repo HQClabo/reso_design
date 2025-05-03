@@ -193,7 +193,7 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
 
 
 
-def fit_simulation_from_file(simulation_data_file, model, f0_guess=None, k_ext_guess=None, tan_delta=1e-5, print_results=True, plot_results=True, skiprows=2):
+def fit_simulation_from_file(simulation_data_file, model, f0_guess=None, k_ext_guess=None, tan_delta=1e-5, print_results=True, plot_results=True, skiprows=2, col_to_use=None):
     """ Fit the complex scattering parameter from a simulation output file. 
 
     This function assumes that the data was saved from Sonnet using "Output -> S,Y,Z-Parameter file -> Complex format: Real-Imag".
@@ -211,7 +211,8 @@ def fit_simulation_from_file(simulation_data_file, model, f0_guess=None, k_ext_g
         A dictionary with keys "f0", "k_ext", "k_int", "Q_ext", "Q_int" and values from the fit.
         
     """
-    col_to_use = (0, 5, 6) if model == "transmission" or model == "hanged" else (0, 1, 2)
+    if col_to_use == None:
+        col_to_use = (0, 5, 6) if model == "transmission" or model == "hanged" else (0, 1, 2)
     data = np.loadtxt(simulation_data_file, delimiter=',', skiprows=skiprows, usecols=col_to_use)
     freq = data[:,0]
     Sdata = data[:,1] + 1j * data[:,2] 
