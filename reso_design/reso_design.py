@@ -296,7 +296,7 @@ class JJArrayDolan(Junction):
 
 
     def update_C_from_simulation(self, fr_simulation):
-        self.Ctot = 1/(16 * self.length**2 * fr_simulation**2 * self.L)
+        self.Ctot = 1/(4 * np.pi**2 * fr_simulation**2 * self.Leq)
         self.update()
     
     def plot_f_of_B_in(self):
