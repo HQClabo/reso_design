@@ -276,24 +276,23 @@ class JJArrayDolan(Junction):
 
         # In case Ctot has been written (for instance because obtained from simulation)
         if self.Ctot != None: 
-            self.C = self.Ctot
-
-        self.Z0 = np.sqrt(self.L/self.C)
-        self.vph = 1/np.sqrt(self.L*self.C)
-        self.alpha = self.Z0 / (h/(2*e)**2)
+            self.Ceq = self.Ctot
+            self.C = self.Ceq * 2 / self.length
+        else:
+            self.Ceq = self.C*self.length/2
 
         if self.type == "lambda_quarter":
-            self.fr = self.vph/(4*self.length) 
             self.Leq = 8*self.Ltot/(np.pi**2) 
-            self.Ceq = self.C*self.length/2
-            self.Zeq = 4/np.pi * self.Z0
+            self.Zeq = np.sqrt(self.Leq/self.Ceq)
+            self.Z0 = self.Zeq * np.pi / 4
         if self.type == "lambda_half":
-            self.fr = self.vph/(2*self.length)
             self.Leq = 2*self.Ltot*(np.pi**2) 
-            self.Ceq = self.C*self.length/2
-            self.Zeq = 2/np.pi * self.Z0
+            self.Zeq = np.sqrt(self.Leq/self.Ceq)
+            self.Z0 = self.Zeq * np.pi / 2
          
-        self.fr_eq = 1/(2*np.pi*np.sqrt(self.Leq*self.Ceq))
+        self.fr = 1/(2*np.pi*np.sqrt(self.Leq*self.Ceq))
+        self.vph = 1/np.sqrt(self.L*self.C)
+        self.alpha = self.Z0 / (h/(2*e)**2)
 
 
     def update_C_from_simulation(self, fr_simulation):
@@ -340,7 +339,6 @@ class JJArrayDolan(Junction):
         print(f"Equivalent inductance Leq = {self.Leq*1e9:.1f} nH")
         print(f"Equivalent impedance Zeq = {self.Zeq:.0f} Ohm")
         print(f"Resonance frequency fr = {self.fr*1e-9:.4f} GHz")
-        print(f"Eq resonance frequency fr = {self.fr_eq*1e-9:.4f} GHz")
         print(f"Alpha = Z/RQ = {self.alpha}")
 
 
@@ -409,26 +407,28 @@ class JJArrayBridgeless(Junction):
         else:
             self.C = calculate_geometric_capacitance_coplanar(self.w, self.gap, self.H, self.eps_r)
 
+
         # In case Ctot has been written (for instance because obtained from simulation)
         if self.Ctot != None: 
-            self.C = self.Ctot
-
-        self.Z0 = np.sqrt(self.L/self.C)
-        self.vph = 1/np.sqrt(self.L*self.C)
-        self.alpha = self.Z0 / (h/(2*e)**2)
+            self.Ceq = self.Ctot
+            self.C = self.Ceq * 2 / self.length
+        else:
+            self.Ceq = self.C*self.length/2
 
         if self.type == "lambda_quarter":
-            self.fr = self.vph/(4*self.length) 
+            # self.fr = self.vph/(4*self.length) 
             self.Leq = 8*self.Ltot/(np.pi**2) 
-            self.Ceq = self.C*self.length/2
-            self.Zeq = 4/np.pi * self.Z0
+            self.Zeq = np.sqrt(self.Leq/self.Ceq)
+            self.Z0 = self.Zeq * np.pi / 4
         if self.type == "lambda_half":
-            self.fr = self.vph/(2*self.length)
+            # self.fr = self.vph/(2*self.length)
             self.Leq = 2*self.Ltot*(np.pi**2) 
-            self.Ceq = self.C*self.length/2
-            self.Zeq = 2/np.pi * self.Z0
+            self.Zeq = np.sqrt(self.Leq/self.Ceq)
+            self.Z0 = self.Zeq * np.pi / 2
          
-        self.fr_eq = 1/(2*np.pi*np.sqrt(self.Leq*self.Ceq))
+        self.fr = 1/(2*np.pi*np.sqrt(self.Leq*self.Ceq))
+        self.vph = 1/np.sqrt(self.L*self.C)
+        self.alpha = self.Z0 / (h/(2*e)**2)
 
     def calc_N_given_f(self, freq):
         if self.type == "lambda_quarter":
