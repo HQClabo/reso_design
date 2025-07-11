@@ -6,13 +6,13 @@ d_top = 40e-9 # metal thickness
 tox = 1e-9        # oxide thickness
 
 w = 0.515e-6      # junction width
-l_j = 0.5e-6    # junction length
-l_s = 3.0e-6    # spacing between junctions
-l_u = 4.5e-6    # unit
+l_j = 0.5e-6    # length of junction
+l_s = 3.0e-6    # length of spurious junction
+l_u = 4.5e-6    # length of the unit (i.e. length of bridge + length bridge-to-bridge)
 
-gap = 40e-6 - w/2 # spacing from ground plane
-H = 525e-6      # substrate thickness
-RA = 650e-12    # junction normalized RT resistance in Ohm m^2
+gap = 40e-6 - w/2   # spacing from ground plane
+H = 525e-6          # substrate thickness
+RA = 650e-12        # junction normalized RT resistance in Ohm m^2
 
 N0 = 26          # number of junctions
 

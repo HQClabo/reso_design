@@ -66,7 +66,8 @@ def calculate_junction_kinetic_inductance(w, l, RA):
 '''
 Source for material properties: https://uspas.fnal.gov/materials/15Rutgers/1_SRF_Fundamentals.pdf
 '''
-
+#-----------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------
 class Junction:
     """
     Class describing a generic Josephson junction Al-AlOx-Al.
@@ -186,45 +187,21 @@ class Junction:
         print(f"Plasma frequency f_P = {self.f_plasma*1e-9:.0f} GHz")
 
 
-class SuperconductingFilm:
-    def __init__(self, d, material):
-        self.d = d
-        self.material = material
-        if material == "Al":
-            self.london = 16e-9
-            self.pippard = 1600e-9
-            self.B_crit_bulk = 10e-3
-        elif material == "Nb":
-            self.london = 32e-9
-            self.pippard = 39e-9
-            self.B_crit_bulk = 100e-3
-        self.london_eff = self.london * np.sqrt(self.pippard/self.d)
-        self.B_crit_in = self.B_crit_bulk * self.london_eff / self.d * np.sqrt(24)
-
-    def print(self):
-        print("**********************************************")
-        print("SUPERCONDUCTING FILM")
-        print("**********************************************")
-        print(f"Material: {self.material}")
-        print(f"Film thickness: {self.d*1e9:.0f} nm")
-        print(f"London eff. length: {self.london_eff*1e9:.0f} nm")
-        print(f"In-plane Bcrit: {self.B_crit_in*1e3:.1f} mT")
-        print(f"Out-of-plane Bcrit: {self.B_crit_bulk*1e3:.1f} mT")
-        return repr
-    
+#-----------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------
 
 class JJArrayDolan(Junction):
     def __init__(self, d_top, d_bottom, tox, w, l_junction, l_spurious, l_unit, gap, N, H=525e-6, sheet_resistance=550e-12, eps_r=11.9, type="lambda_quarter"):
         """
-        Class describing a JJ array resonator (so far only lambda/4).
+        Class describing a JJ array resonator.
 
         Args:
             d_top: Thickness of the top Al layer.
             d_bottom: Thickness of the bottom Al layer.
             w: Width of the resonator.
-            l_junction: Wength of the junction.
+            l_junction: Length of the junction.
             l_spurious: Length of the spurious junction.
-            l_unit: Length of one unit (junction + spurious junction + gaps in between, i.e. bridge + body).
+            l_unit: Length of one unit (i.e. bridge length + bridge-to-bridge length).
             gap: Gap between resonator core and ground plane.
             H: Substrate thickness.
             l_unit: Length of the junction unit.
@@ -341,6 +318,36 @@ class JJArrayDolan(Junction):
         print(f"Resonance frequency fr = {self.fr*1e-9:.4f} GHz")
         print(f"Alpha = Z/RQ = {self.alpha}")
 
+
+#-----------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------
+
+class SuperconductingFilm:
+    def __init__(self, d, material):
+        self.d = d
+        self.material = material
+        if material == "Al":
+            self.london = 16e-9
+            self.pippard = 1600e-9
+            self.B_crit_bulk = 10e-3
+        elif material == "Nb":
+            self.london = 32e-9
+            self.pippard = 39e-9
+            self.B_crit_bulk = 100e-3
+        self.london_eff = self.london * np.sqrt(self.pippard/self.d)
+        self.B_crit_in = self.B_crit_bulk * self.london_eff / self.d * np.sqrt(24)
+
+    def print(self):
+        print("**********************************************")
+        print("SUPERCONDUCTING FILM")
+        print("**********************************************")
+        print(f"Material: {self.material}")
+        print(f"Film thickness: {self.d*1e9:.0f} nm")
+        print(f"London eff. length: {self.london_eff*1e9:.0f} nm")
+        print(f"In-plane Bcrit: {self.B_crit_in*1e3:.1f} mT")
+        print(f"Out-of-plane Bcrit: {self.B_crit_bulk*1e3:.1f} mT")
+        return repr
+    
 
 
 class JJArrayBridgeless(Junction):
