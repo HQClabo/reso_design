@@ -14,45 +14,45 @@ eps_r_AlOx = 9
 # Functions 
 def K_func(w, s, H):
     k = w / (w+2*s)
-    K = sc.special.ellipk(k)
+    K = sc.special.ellipk(k**2) # In scipy ellipk, input is m = k**2 not k. 
     return K
 
 def Kp_func(w, s, H):
     k = w / (w+2*s)
     kp = np.sqrt(1-k**2)
-    Kp = sc.special.ellipk(kp)
+    Kp = sc.special.ellipk(kp**2) # In scipy ellipk, input is m = k**2 not k.
     return Kp
 
 def K1_func(w, s, H):
     b = w + 2*s
-    k1 = np.tanh(np.pi*w/(4*H)) / np.tanh(np.pi*b/(4*H))
-    K1 = sc.special.ellipk(k1)
+    #k1 = np.tanh(np.pi*w/(4*H)) / np.tanh(np.pi*b/(4*H)) # https://qucs.sourceforge.net/tech/node86.html
+    k1 = np.sinh(np.pi*w/4/H) / np.sinh(np.pi*b/4/H) # This is for w/o GP at the bottom of substrate
+    K1 = sc.special.ellipk(k1**2) # In scipy ellipk, input is m = k**2 not k.
     return K1
 
 def K1p_func(w, s, H):
     b = w + 2*s
-    k1 = np.tanh(np.pi*w/(4*H)) / np.tanh(np.pi*b/(4*H))
+    #k1 = np.tanh(np.pi*w/(4*H)) / np.tanh(np.pi*b/(4*H)) # https://qucs.sourceforge.net/tech/node86.html
+    k1 = np.sinh(np.pi*w/4/H) / np.sinh(np.pi*b/4/H)
     k1p = np.sqrt(1-k1**2)
-    K1p = sc.special.ellipk(k1p)
+    K1p = sc.special.ellipk(k1p**2) # In scipy ellipk, input is m = k**2 not k.
     return K1p
 
-def calculate_geometric_capacitance_coplanar(w, gap, H, eps_r=11.9):
+def calculate_geometric_capacitance_coplanar(w, gap, H, eps_r=11.9): # https://qucs.sourceforge.net/tech/node86.html
     K = K_func(w, gap, H)
     Kp = Kp_func(w, gap, H)
     K1 = K1_func(w, gap, H)
     K1p = K1p_func(w, gap, H)
-    Gamma = 1 / (K/Kp + K1/K1p)
-    A = 2*Gamma
-    B = 1/A
-    eps_eff = (1 + eps_r * Kp/K*K1/K1p) / (1 + Kp/K*K1/K1p)
+    
+    eps_eff = 1 + (eps_r-1)/2 * (K1/K1p)*(Kp/K)
 
-    return 4*eps_eff*eps_0 * B
+    return 4*eps_0*eps_eff*K/Kp 
 
 def calculate_geometric_capacitance_microstrip(w, t_ox, eps_r_ox):
     return w * eps_0 * eps_r_ox / t_ox
 
 def calculate_Z0_microstrip(w, t_ox, eps_r_ox):
-    eps_eff = (eps_r_ox + 1)/2 + (eps_r_ox + 1)/2 / (np.sqrt(1 + 12*t_ox/w))
+    eps_eff = (eps_r_ox + 1)/2 + (eps_r_ox - 1)/2 / (np.sqrt(1 + 12*t_ox/w)) # Pozar p.148 correct factor eps_r_ox + 1 ==> eps_r_ox - 1
     return 60/np.sqrt(eps_eff) * np.log(8*t_ox/w + w/(4*t_ox))
 
 def calculate_junction_kinetic_inductance(w, l, RA):
