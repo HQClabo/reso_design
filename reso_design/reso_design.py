@@ -33,7 +33,7 @@ def K1_func(w, s, H):
 def K1p_func(w, s, H):
     b = w + 2*s
     #k1 = np.tanh(np.pi*w/(4*H)) / np.tanh(np.pi*b/(4*H)) # https://qucs.sourceforge.net/tech/node86.html
-    k1 = np.sinh(np.pi*w/4/H) / np.sinh(np.pi*b/4/H)
+    k1 = np.sinh(np.pi*w/4/H) / np.sinh(np.pi*b/4/H) # This is for w/o GP at the bottom of substrate
     k1p = np.sqrt(1-k1**2)
     K1p = sc.special.ellipk(k1p**2) # In scipy ellipk, input is m = k**2 not k.
     return K1p
