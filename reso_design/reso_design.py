@@ -118,6 +118,7 @@ class Junction:
         self.Ec = e**2/(2*self.C_J)
         self.alpha0 = h/(4*e**2*self.R_junction)
         self.f_plasma = 1/(2*np.pi*np.sqrt(self.L_junction*self.C_J))
+        self.Kerr = -self.Ec/2
 
     def f_of_B_in(self, B_in, f_max=10e9):
         return f_max * np.power(1 - (B_in/self.B_crit_in)**2, 1./4) * np.sqrt(np.abs(np.sinc(B_in / self.B_phi0)))
@@ -186,7 +187,7 @@ class Junction:
         print(f"Ratio EJ/Ec = {self.EJ/self.Ec:.2f}")
         print(f"Alpha0 = RQ/RJ = {self.alpha0:.2f}")
         print(f"Plasma frequency f_P = {self.f_plasma*1e-9:.0f} GHz")
-
+        print(f"Kerr single JJ = {self.Kerr/h*1e-9:.3f} GHz")
 
 #-----------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------------
