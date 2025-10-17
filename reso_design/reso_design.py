@@ -321,7 +321,7 @@ class JJArrayDolan(Junction):
         print(f"Equivalent impedance Zeq = {self.Zeq:.0f} Ohm")
         print(f"Resonance frequency fr = {self.fr*1e-9:.4f} GHz")
         print(f"Alpha = Z/RQ = {self.alpha}")
-        print(f"Kerr resonator = K/N^2 = {self.kerr_single_JJ/(N**2)*1e-3:.0f} kHz")
+        print(f"Kerr resonator = K/N^2 = {self.kerr_single_JJ/(self.N**2)*1e-3:.0f} kHz")
 
 
 #-----------------------------------------------------------------------------------------------------------
