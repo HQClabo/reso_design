@@ -187,7 +187,7 @@ class Junction:
         print(f"Ratio EJ/Ec = {self.EJ/self.Ec:.2f}")
         print(f"Alpha0 = RQ/RJ = {self.alpha0:.2f}")
         print(f"Plasma frequency f_P = {self.f_plasma*1e-9:.0f} GHz")
-        print(f"Kerr single JJ = {self.Kerr_single_JJ/h*1e-9:.3f} GHz")
+        print(f"Kerr single JJ K = {self.Kerr_single_JJ/h*1e-9:.3f} GHz")
 
 #-----------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------------
