@@ -118,7 +118,7 @@ class Junction:
         self.Ec = e**2/(2*self.C_J)
         self.alpha0 = h/(4*e**2*self.R_junction)
         self.f_plasma = 1/(2*np.pi*np.sqrt(self.L_junction*self.C_J))
-        self.Kerr_single_JJ = -self.Ec/2
+        self.Kerr_single_JJ = -self.Ec
 
     def f_of_B_in(self, B_in, f_max=10e9):
         return f_max * np.power(1 - (B_in/self.B_crit_in)**2, 1./4) * np.sqrt(np.abs(np.sinc(B_in / self.B_phi0)))
@@ -193,7 +193,7 @@ class Junction:
 #-----------------------------------------------------------------------------------------------------------
 
 class JJArrayDolan(Junction):
-    def __init__(self, d_top, d_bottom, tox, w, l_junction, l_spurious, l_unit, gap, N, H=525e-6, sheet_resistance=550e-12, eps_r=11.9, kerr_single_JJ=-0.6*1e9, type="lambda_quarter"):
+    def __init__(self, d_top, d_bottom, tox, w, l_junction, l_spurious, l_unit, gap, N, H=525e-6, sheet_resistance=550e-12, eps_r=11.9, type="lambda_quarter"):
         """
         Class describing a JJ array resonator.
 
@@ -223,8 +223,13 @@ class JJArrayDolan(Junction):
         self.N = N
         self.RA = sheet_resistance
         self.eps_r = eps_r
-        self.kerr_single_JJ = kerr_single_JJ
-        self.kerr_resonator = self.kerr_single_JJ/(self.N**2)
+        self.w = w
+        self.tox = tox
+        self.C_J = eps_0*eps_r_AlOx*self.w*self.l_junction/self.tox
+        self.Ec = e**2/(2*self.C_J)
+        self.Kerr_single_JJ = -self.Ec
+        self.Kerr_resonator = self.Kerr_single_JJ/(self.N**2)
+
         assert type == "lambda_quarter" or type == "lambda_half"
         self.type = type
 
@@ -321,7 +326,7 @@ class JJArrayDolan(Junction):
         print(f"Equivalent impedance Zeq = {self.Zeq:.0f} Ohm")
         print(f"Resonance frequency fr = {self.fr*1e-9:.4f} GHz")
         print(f"Alpha = Z/RQ = {self.alpha}")
-        print(f"Kerr resonator = K/N^2 = {self.kerr_single_JJ/(self.N**2)*1e-3:.0f} kHz")
+        print(f"Kerr resonator = K/N^2 = {self.Kerr_resonator*1e-3:.0f} kHz")
 
 
 #-----------------------------------------------------------------------------------------------------------
