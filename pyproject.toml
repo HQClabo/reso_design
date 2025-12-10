@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "reso_design"
+version = "1.0"
+authors = [
+  { name="Elena Acinapura", email="elena.acinapura@gmail.com" },
+]
+description = "Package for designing the parameters of superconducting resonators"
+readme = "README.md"
+requires-python = ">=3.0"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
