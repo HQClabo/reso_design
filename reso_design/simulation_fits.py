@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import lmfit
-import csv
+import dataAnalysis.resonator_fitting
 
 ####################### Models #########################
 def mag(Sdata):
@@ -17,12 +17,13 @@ def S21_hanged(f_drive, f_0, k_int, k_ext, a, alpha, tau):
 def S21_transmission(f_drive, f_0, k_int, k_ext):
     Delta = f_drive - f_0
     S21 = (k_ext/2)/(1j*Delta + (k_int + k_ext)/2)
-    return mag(S21)
+    return S21
 
-def S11_reflection(f_drive, f_0, k_int, k_ext):
+def S11_reflection(f_drive, f_0, k_int, k_ext, a, alpha, tau):
     Delta = f_drive - f_0
-    S11 = (1j*Delta + (k_ext - k_int)/2)/(-1j*Delta + (k_int + k_ext)/2)
-    return mag(S11)
+    S11 = (-1j*Delta + (k_ext - k_int)/2)/(1j*Delta + (k_int + k_ext)/2)
+    environment =  a * np.exp(1j * (alpha - 2*np.pi*f_drive*tau))
+    return S11 * environment
 
 ####################### Auxiliary functions #########################
 
@@ -62,13 +63,13 @@ def find_HM_points(mag):
 
 ####################### Fitting functions #########################
 
-def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delta=1e-5, print_result=True, plot_results=True):
+def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delta=1e-5, tau_guess=0, print_result=True, plot_results=True, plot_initial_guess=False):
     """ Fit the complex scattering parameter with the input-output theory model.
 
     Args:
         freq: Frequency array (in GHz).
         Sdata: Complex scattering parameter array.
-        model: Either "hanged", "transmission" or "reflection". 
+        model: Either "notch", "transmission" or "reflection". 
         f0_guess: Guess for the resonance frequency.
         k_ext_guess: Guess for the external decay rate.
         tan_delta: Loss tangent provided in Sonnet.
@@ -80,7 +81,7 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
 
     """
     # Check that the provided model is correct
-    if model not in ["transmission", "reflection", "hanged"]:
+    if model not in ["transmission", "reflection", "notch"]:
         print(f"Error: the provided model is not supported. Check the spelling.")
         raise ValueError
     
@@ -96,22 +97,20 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
     if k_ext_guess == None:
         low_idx, high_idx = find_HM_points(mag(Sdata))
         if low_idx == None or high_idx == None: 
-            "No guess could be calculated for k_ext. Please provide the guess yourself."
-            raise ValueError
+            raise ValueError("No guess could be calculated for k_ext. Please provide the guess yourself.")
         FWHM = freq[high_idx] - freq[low_idx]
         k_ext_guess = FWHM
     Q_ext_guess = f0_guess/k_ext_guess
 
 
-    a_guess = 1
-    alpha_guess = 0
-    tau_guess = 0
 
     # Create parameter object
     params=lmfit.Parameters()
     params.add('k_int',value=k_int_guess,vary=True)
     params.add('k_ext',value=k_ext_guess,vary=True)
     params.add('f_0',value=f0_guess,vary=True)
+    a_guess = 1
+    alpha_guess = 0
     params.add('a',value=a_guess,vary=True)
     params.add('alpha',value=alpha_guess,vary=True)
     params.add('tau',value=tau_guess    ,vary=True)
@@ -131,12 +130,44 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
 
 
     # Create the lmfit model
-    if model == "hanged":
+    if model == "notch":
         model_lmfit = lmfit.Model(S21_hanged)
     elif model == "reflection":
         model_lmfit = lmfit.Model(S11_reflection)
     elif model == "transmission":
         model_lmfit = lmfit.Model(S21_transmission)
+
+
+    # plot initial guess
+    if plot_initial_guess:
+        k_tot = k_ext_guess + k_int_guess
+        f_low = f0_guess - 5*k_tot/2
+        f_high = f0_guess + 5*k_tot/2
+        idx_low = val_to_pos_irregular(freq, f_low)
+        idx_high = val_to_pos_irregular(freq, f_high)
+        slice_to_plot = np.s_[idx_low:idx_high]
+
+        guess_data_x = np.linspace(f_low, f_high, 1000)
+        guess_data = model_lmfit.eval(params, f_drive=guess_data_x)
+
+        plt.figure()
+        plt.plot(freq[slice_to_plot], mag(Sdata)[slice_to_plot], '.', color="black", label="Simulation")
+        plt.plot(guess_data_x, mag(guess_data), color="red", label="Fit")
+        plt.xlabel("Frequency (GHz)")
+        plt.ylabel("Mag($S_{21}$)")
+        plt.legend()
+        plt.grid()
+        plt.show()
+
+        plt.figure()
+        plt.plot(freq[slice_to_plot], np.angle(Sdata, deg=True)[slice_to_plot], '.', color="black", label="Simulation")
+        plt.plot(guess_data_x, np.angle(guess_data, deg=True), color="red", label="Fit")
+        plt.xlabel("Frequency (GHz)")
+        plt.ylabel("Arg($S_{21}$) (deg)")
+        plt.legend()
+        plt.grid()
+        plt.show()
+
 
     # Fit and extract parameters
     fit_result = model_lmfit.fit(Sdata, params, f_drive=freq)
@@ -189,32 +220,47 @@ def fit_scattering(freq, Sdata, model, f0_guess=None, k_ext_guess=None, tan_delt
         plt.grid()
         plt.show()
 
+        plt.figure()
+        plt.plot(freq[slice_to_plot], np.angle(Sdata, deg=True)[slice_to_plot], '.', color="black", label="Simulation")
+        plt.plot(fitted_data_x, np.angle(fitted_data, deg=True), color="red", label="Fit")
+        plt.xlabel("Frequency (GHz)")
+        plt.ylabel("Arg($S_{21}$) (deg)")
+        plt.legend()
+        plt.grid()
+        plt.show()
+
     return {"f0": f0_fit, "k_ext": k_ext_fit, "k_int": k_int_fit, "Q_ext": Q_ext_fit, "Q_int": Q_int_fit}
 
 
 
-def fit_simulation_from_file(simulation_data_file, model, f0_guess=None, k_ext_guess=None, tan_delta=1e-5, print_results=True, plot_results=True, skiprows=2, col_to_use=None):
+def fit_simulation_from_file(simulation_data_file, skiprows=2, port_type='hanged', col_to_use=None, **kwargs):
     """ Fit the complex scattering parameter from a simulation output file. 
 
     This function assumes that the data was saved from Sonnet using "Output -> S,Y,Z-Parameter file -> Complex format: Real-Imag".
 
     Args:
         simulation_data_file: Path to the location of simulation output file.
-        model: Either "hanged", "transmission" or "reflection". 
-        f0_guess: Guess for the resonance frequency.
-        k_ext_guess: Guess for the external decay rate.
-        tan_delta: Loss tangent provided in Sonnet.
-        print_results: Boolean.
-        plot_results: Boolean.
+        skiprows: Number of rows to skip at the beginning of the file (default: 2).
+        port_type: Either "notch", "transmission" or "reflection" (default: "notch").
+        col_to_use: Tuple of column indices to use (frequency, real, imaginary). 
+                    If None, defaults are used based on port_type.
+        **kwargs: Additional keyword arguments passed to fit_frequency_sweep.
 
     Returns:
         A dictionary with keys "f0", "k_ext", "k_int", "Q_ext", "Q_int" and values from the fit.
         
     """
+
+    if port_type not in ["transmission", "reflection", "notch"]:
+        print(f"Error: the provided model is not supported. Check the spelling.")
+        raise ValueError
+    
     if col_to_use == None:
-        col_to_use = (0, 5, 6) if model == "transmission" or model == "hanged" else (0, 1, 2)
+        col_to_use = (0, 5, 6) if port_type == "transmission" or port_type == "notch" else (0, 1, 2)
+
     data = np.loadtxt(simulation_data_file, delimiter=',', skiprows=skiprows, usecols=col_to_use)
     freq = data[:,0]
-    Sdata = data[:,1] + 1j * data[:,2] 
-    return fit_scattering(freq, Sdata, model, f0_guess, k_ext_guess, tan_delta, print_results, plot_results)
+    Sdata = data[:,1] + 1j * data[:,2]
+    # return fit_scattering(freq, Sdata, model, f0_guess, k_ext_guess, tan_delta, tau_guess, print_results, plot_results, plot_initial_guess)
+    return dataAnalysis.resonator_fitting.fit_frequency_sweep(Sdata, freq, port_type=port_type, method='lmfit', **kwargs)
 
