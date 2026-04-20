@@ -2,6 +2,7 @@
 import numpy as np
 import scipy.constants as const
 from dataAnalysis import resonator_fitting as res_fit
+from matplotlib import pyplot as plt
 
 class ReflectometryResonator:
     """
@@ -208,8 +209,6 @@ class ReflectometryResonator:
     @property
     def kappa_c(self):
         """ External resonator linewidth in hertz (Hz). """
-        Z = float(np.sqrt(self.L / self.C))
-        kappa_c = self.fres * self.Z0 / Z
         return self.fres / self.Q_c
     
     @property
@@ -231,7 +230,7 @@ class ReflectometryResonator:
         nonlinearity = -3/8 * const.hbar*(2*np.pi*self.fres)**2 / (self.L * self.Ic**2)
         return nonlinearity
 
-    def reflectivity(self, freq, power=None):
+    def reflectivity(self, freq, power=None, nonlinear=False):
         """
         Calculate the reflectometry response at given frequencies.
         
@@ -241,9 +240,29 @@ class ReflectometryResonator:
         Returns:
             array-like: Reflectometry response.
         """
-        if power is None:
-            power = self.power
-        return res_fit.S11_resonator_reflection_nonlinear(fdrive=freq, power=power, fr=self.fres, kappa=self.kappa, kappa_c=self.kappa_c, a=1, alpha=0, delay=0, Kerr=self.Kerr)
+        
+        if nonlinear:
+            if power is None:
+                power = self.power
+            return res_fit.S11_resonator_reflection_nonlinear(fdrive=freq, power=power, fr=self.fres, kappa=self.kappa, kappa_c=self.kappa_c, a=1, alpha=0, delay=0, Kerr=self.Kerr)
+        else:
+            return res_fit.S11_resonator_reflection(fdrive=freq, fr=self.fres, kappa=self.kappa, kappa_c=self.kappa_c, a=1, alpha=0, delay=0)
+        
+    def plot_S11(self, freq, power=None, nonlinear=False, **kwargs):
+        fig, axes = plt.subplots(1, 2)
+        fig.set_size_inches(12, 4)
+        S11 = self.reflectivity(freq, power, nonlinear)
+
+        axes[0].plot(freq, 20*np.log10(np.abs(S11)))
+        axes[0].set_xlabel("Freq (Hz)")
+        axes[0].set_ylabel("$|S_{11}|$ (dB)")
+
+        axes[1].plot(freq, np.angle(S11, deg=True))
+        axes[1].set_xlabel("Freq (Hz)")
+        axes[1].set_ylabel("Arg($S_{11}$) (deg)")
+
+        return fig, axes
+        
     
     def get_visibility(self, freq, R1, R2, power=None):
         """
