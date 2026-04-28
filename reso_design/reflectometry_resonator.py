@@ -53,6 +53,7 @@ class ReflectometryResonator:
         self._jc = None # Critical current density in ampères per square metre (A/m²)
         self._Ic = None # Critical current in ampères (A)
         self._Lk = None # Kinetic inductance in henries per square (H/sq)
+        self._power = None # Input power for the resonator resonance in watts (dBm)
     
     @property
     def L(self):
@@ -121,6 +122,9 @@ class ReflectometryResonator:
     def length(self):
         """ Resonator length in metres (m). """
         return self.L / self.Lk * self.width
+    @length.setter
+    def length(self, value):
+        self.L = value * self.Lk * self.width
 
     @property
     def width(self):
@@ -144,6 +148,9 @@ class ReflectometryResonator:
     def n_squares(self):
         """ Number of squares in the resonator geometry (unitless). """
         return self.length / self.width
+    @n_squares.setter
+    def n_squares(self, value):
+        self.L = value * self.Lk
     
     @property
     def jc(self):
@@ -219,6 +226,7 @@ class ReflectometryResonator:
     @property
     def power(self):
         """ Input power for the resonator resonance in watts (dBm). """
+        self._check_variable_set(self._power, 'power')
         return self._power
     @power.setter
     def power(self, value):
@@ -264,7 +272,7 @@ class ReflectometryResonator:
         return fig, axes
         
     
-    def get_visibility(self, freq, R1, R2, power=None):
+    def get_visibility(self, freq, R1, R2, power=None, nonlinear=False):
         """
         Calculate visibility as the separation in IQ plane of the reflectometry signal
         for two different deviceresistance states.
@@ -282,9 +290,9 @@ class ReflectometryResonator:
             power = self.power
         R_before = self.R_device
         self.R_device = R1
-        S11_R1 = self.reflectivity(freq, power)
+        S11_R1 = self.reflectivity(freq, power, nonlinear)
         self.R_device = R2
-        S11_R2 = self.reflectivity(freq, power)
+        S11_R2 = self.reflectivity(freq, power, nonlinear)
         visibility = (S11_R1.real - S11_R2.real) + 1j*(S11_R1.imag - S11_R2.imag)
         self.R_device = R_before
         return np.abs(visibility)
