@@ -44,7 +44,7 @@ class ReflectometryResonator:
         self._Z0 = 50  # Characteristic feedline impedance in ohms (default is 50 ohms)
         self._L = None  # Inductance in henries (H)
         self._C = None  # Capacitance in farads (F)
-        self._R_device = None  # Device resistance in ohms (Ω)
+        self._R_device = 1e12  # Device resistance in ohms (Ω)
         self._R_spurious = 1e12  # Spurious resistance in ohms (Ω)
         self._fres = None # Resonator frequency in hertz (Hz)
         self._width = None # Inductor width in metres (m)
@@ -76,6 +76,19 @@ class ReflectometryResonator:
         self._C = value
         if self._L is not None:
             self._fres = self._get_fres_from_LC()
+
+    @property
+    def fres(self):
+        """ Resonance frequency in hertz (Hz). """
+        self._check_variable_set(self._fres, 'fres')
+        return self._fres
+    @fres.setter
+    def fres(self, value):
+        self._fres = value
+        if self._L is not None and self._C is None:
+            self._C = self._get_C_from_fres()
+        if self._C is not None and self._L is None:
+            self._L = self._get_L_from_fres()
     
     @property
     def R(self):
@@ -84,7 +97,7 @@ class ReflectometryResonator:
     
     @property
     def R_device(self):
-        """ Device resistance in ohms (Ω). """
+        """ Device resistance in ohms of the charge sensor (Ω). """
         self._check_variable_set(self._R_device, 'R_device')
         return self._R_device
     @R_device.setter
@@ -99,16 +112,6 @@ class ReflectometryResonator:
     @R_spurious.setter
     def R_spurious(self, value):
         self._R_spurious = value
-
-    @property
-    def fres(self):
-        """ Resonance frequency in hertz (Hz). """
-        self._check_variable_set(self._fres, 'fres')
-        return self._fres
-    @fres.setter
-    def fres(self, value):
-        self._fres = value
-        self._C = self._get_C_from_fres()
     
     @property
     def Z0(self):
@@ -286,8 +289,6 @@ class ReflectometryResonator:
         Returns:
             float: Ratio of reflectance.
         """
-        if power is None:
-            power = self.power
         R_before = self.R_device
         self.R_device = R1
         S11_R1 = self.reflectivity(freq, power, nonlinear)
@@ -345,6 +346,9 @@ class ReflectometryResonator:
     
     def _get_C_from_fres(self):
         return 1 / ((2 * np.pi * self.fres) ** 2 * self.L)
+    
+    def _get_L_from_fres(self):
+        return 1 / ((2 * np.pi * self.fres) ** 2 * self.C)
     
     def _get_fres_from_LC(self):
         return 1 / (2 * np.pi * float(np.sqrt(self.L * self.C)))
