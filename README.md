@@ -14,7 +14,7 @@ Some example scripts are provided in the reso_design directory.
 ### The `JJ_array` class
 The JJ array class is used to design junction array resonators. Here is how it can be used:
 
-```
+```python
 from reso_design import JJ_array
 
 d_bottom = 20e-9 # metal thickness
@@ -40,7 +40,72 @@ reso.print()
 
 It is futhermore possible to print the frequency modulation in in-plane and out-of-plane magnetic fields:
 
-```
+```python
 fig = reso.plot_f_of_B_in()
 fig2 = reso.plot_f_of_B_out()
+```
+
+## Reflectometry resontaor
+
+### Simple example of a linear resonator
+```python
+# define tank circuit parameters
+res = ReflectometryResonator()
+res.L = 2e-6
+res.fres = 150e6
+res.R_device = 100e3
+res.spurious = 200e3
+
+# create frequency array
+span = res.kappa * 3
+freqs = np.linspace(res.fres-span/2, res.fres+span/2, 2000)
+
+# return array with frequency response of the tank circuit
+S11 = res.reflectivity(freqs, power=None, nonlinear=False)
+```
+
+### Comparing visibility between two different resistances
+```python
+# resistance values to compare
+r1 = 100e3
+r2 = 200e3
+
+# define tank circuit parameters
+res = ReflectometryResonator()
+res.L = 2e-6
+res.fres = 150e6
+res.R_device = 100e3
+res.spurious = 200e3
+
+# create frequency array
+span = res.kappa * 3
+freqs = np.linspace(res.fres-span/2, res.fres+span/2, 2000)
+
+# return the distance in IQ plane between two different device resistance values
+visibility = res.get_visibility(freqs, r1, r2)
+```
+
+### Power dependence of a nonlinear resonator
+```python
+# define tank circuit parameters
+# here, the nonlinearity is determined from Ic and the dimensions of the resonator
+res = ReflectometryResonator()
+res.Lk = 2320e-12
+res.n_squares = 500
+res.C = 0.184e-12
+res.width = 2.7e-6
+res.thickness = 50e-9
+res.R_device = 200e3
+res.Ic = 40e-6 *res.width/20e-6
+res.power = -120
+
+# create frequency and power arrays
+span = res.kappa * 3
+freqs = np.linspace(res.fres-span/2, res.fres+span/2, 2000)
+powers = np.linspace(-120, -90, 101)
+freq_stack = np.tile(freqs, (len(powers), 1))
+power_stack = np.tile(powers, (len(freqs), 1)).T
+
+# return 2D array with frequency response of the nonlinear tank circuit as a function of frequency and power
+S11 = res.reflectivity(freq_stack, power_stack, nonlinear=True)
 ```
